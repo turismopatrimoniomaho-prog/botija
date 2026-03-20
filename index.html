@@ -1,27 +1,106 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Experience</title>
-    <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebAR MindAR Mejorado</title>
+
+  <!-- A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+
+  <!-- MindAR -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <!-- Gestos -->
+  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+
+  <style>
+    body { margin: 0; overflow: hidden; }
+  </style>
 </head>
+
 <body>
-    <a-scene mindar-image="imageTargetSrc: ./marker.mind;" vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false" renderer="colorManagement: true;">
-        <a-entity light="type: directional; castShadow: true; intensity: 1;" position="0.2 -5.4 2.3"></a-entity>
-        <a-entity light="type: ambient; intensity: 0.5;"></a-entity>
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
-        <a-entity mindar-image-target="targetIndex: 0">
-            <a-gltf-model
-                src="./asset.glb"
-                scale="1.77 1.77 1.77"
-                position="-0.2 0.27 0.36"
-                rotation="99 3 -4"
-            >
-            
-            </a-gltf-model>
-        </a-entity>
-    </a-scene>
+
+<a-scene
+  mindar-image="imageTargetSrc: ./marker.mind; autoStart: true; uiScanning: true; uiLoading: true;"
+  color-space="sRGB"
+  renderer="colorManagement: true, physicallyCorrectLights: true"
+  vr-mode-ui="enabled: false"
+  device-orientation-permission-ui="enabled: false"
+>
+
+  <!-- LUCES -->
+  <a-entity light="type: ambient; intensity: 0.8"></a-entity>
+  <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
+
+  <!-- CÁMARA -->
+  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+  <!-- TARGET -->
+  <a-entity mindar-image-target="targetIndex: 0">
+
+    <!-- CONTENEDOR (para estabilidad) -->
+    <a-entity id="model-container" position="0 0 0">
+
+      <a-gltf-model
+        id="model"
+        src="./asset.glb"
+        scale="0.5 0.5 0.5"
+        position="0 0 0"
+        rotation="0 0 0"
+        animation-mixer
+      >
+      </a-gltf-model>
+
+    </a-entity>
+
+  </a-entity>
+
+</a-scene>
+
+<script>
+  const model = document.querySelector("#model");
+  const container = document.querySelector("#model-container");
+
+  // --- SUAVIZADO (anti temblor) ---
+  let lastPosition = {x:0, y:0, z:0};
+
+  container.addEventListener("componentchanged", (e) => {
+    if (e.detail.name === "position") {
+      let p = container.object3D.position;
+
+      // interpolación suave
+      p.x = lastPosition.x + (p.x - lastPosition.x) * 0.2;
+      p.y = lastPosition.y + (p.y - lastPosition.y) * 0.2;
+      p.z = lastPosition.z + (p.z - lastPosition.z) * 0.2;
+
+      lastPosition = {x: p.x, y: p.y, z: p.z};
+    }
+  });
+
+  // --- CONTROLES TÁCTILES ---
+  const hammertime = new Hammer(document.body);
+
+  let scale = 0.5;
+  let rotationY = 0;
+
+  // ROTAR
+  hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
+
+  hammertime.on("pan", (ev) => {
+    rotationY += ev.deltaX * 0.1;
+    model.setAttribute("rotation", `0 ${rotationY} 0`);
+  });
+
+  // ZOOM
+  hammertime.get('pinch').set({ enable: true });
+
+  hammertime.on("pinch", (ev) => {
+    scale = Math.max(0.2, Math.min(2, scale * ev.scale));
+    model.setAttribute("scale", `${scale} ${scale} ${scale}`);
+  });
+
+</script>
+
 </body>
 </html>
