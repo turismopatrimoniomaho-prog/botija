@@ -37,7 +37,7 @@ hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 // ROTACION 2 EJES
 hammer.on("pan", (ev) => {
 
-rotationY += ev.deltaX * 0.02
+rotationY -= ev.deltaX * 0.02
 rotationX += ev.deltaY * 0.02
 
 // limitar rotación vertical (evita que se voltee completamente)
