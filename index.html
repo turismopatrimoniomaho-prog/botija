@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Modelo Estable</title>
+<title>WebAR Rotación Estable PRO</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -18,8 +18,8 @@ AFRAME.registerComponent('gesture-handler', {
 
 init: function () {
 
-const yPivot = this.el                 // pivote horizontal
-const xPivot = this.el.children[0]     // pivote vertical
+const yPivot = this.el
+const xPivot = this.el.children[0]
 const scene = document.querySelector('a-scene')
 
 let currentScale = 1
@@ -35,23 +35,23 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
-// 🎮 ROTACIÓN CORRECTA (sin inversión)
+// 🔥 ROTACIÓN REALMENTE ESTABLE
 hammer.on("pan", (ev) => {
 
-rotationY += ev.deltaX * 0.02
-rotationX -= ev.deltaY * 0.02
+// 🔑 usar velocidad en vez de delta acumulado
+rotationY += ev.velocityX * 2
+rotationX -= ev.velocityY * 2
 
-// limitar inclinación vertical
+// límite vertical
 rotationX = Math.max(-80, Math.min(80, rotationX))
 
-// 🔵 eje Y (horizontal)
+// aplicar rotaciones separadas
 yPivot.setAttribute("rotation", {
 x: 0,
 y: rotationY,
 z: 0
 })
 
-// 🔴 eje X (vertical)
 xPivot.setAttribute("rotation", {
 x: rotationX,
 y: 0,
@@ -60,7 +60,7 @@ z: 0
 
 })
 
-// 🔍 ZOOM
+// ZOOM
 hammer.on("pinchstart", () => {
 startScale = currentScale
 })
@@ -108,7 +108,7 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 <a-marker type="pattern" url="marker.patt">
 
-<!-- 🟡 OFFSET (flotación, NO rota) -->
+<!-- 🟡 OFFSET -->
 <a-entity position="0 0.3 0">
 
     <!-- 🔵 PIVOTE Y -->
@@ -117,7 +117,7 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
         <!-- 🔴 PIVOTE X -->
         <a-entity>
 
-            <!-- 📦 MODELO (DEBE estar centrado en 3D Builder) -->
+            <!-- 📦 MODELO -->
             <a-entity
             gltf-model="#modelo"
             position="0 0 0"
@@ -138,4 +138,3 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 </body>
 </html>
-
