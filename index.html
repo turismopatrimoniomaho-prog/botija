@@ -1,106 +1,125 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WebAR MindAR Mejorado</title>
+<meta charset="utf-8">
+<title>WebAR Modelo Mejorado</title>
 
-  <!-- A-Frame -->
-  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+<script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+<script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
 
-  <!-- MindAR -->
-  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+<style>
+body { margin:0; overflow:hidden; }
+</style>
 
-  <!-- Gestos -->
-  <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script>
 
-  <style>
-    body { margin: 0; overflow: hidden; }
-  </style>
+AFRAME.registerComponent('gesture-handler', {
+
+init: function () {
+
+const el = this.el
+const scene = document.querySelector('a-scene')
+
+let currentScale = 1
+let startScale = 1
+
+let rotationX = 0   // vertical
+let rotationY = 0   // horizontal
+
+scene.addEventListener("loaded", () => {
+
+const hammer = new Hammer(scene.canvas)
+
+hammer.get('pinch').set({ enable: true })
+hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
+
+// ROTACION 2 EJES
+hammer.on("pan", (ev) => {
+
+rotationY += ev.deltaX * 0.02
+rotationX += ev.deltaY * 0.02
+
+// limitar rotación vertical (evita que se voltee completamente)
+rotationX = Math.max(-80, Math.min(80, rotationX))
+
+el.setAttribute("rotation", {
+x: -rotationX,
+y: rotationY,
+z: 0
+})
+
+})
+
+// ZOOM INICIO
+hammer.on("pinchstart", () => {
+startScale = currentScale
+})
+
+// ZOOM
+hammer.on("pinch", (ev) => {
+
+currentScale = startScale * ev.scale
+
+// límites de zoom
+currentScale = Math.max(0.3, Math.min(currentScale, 4))
+
+el.setAttribute("scale", {
+x: currentScale,
+y: currentScale,
+z: currentScale
+})
+
+})
+
+})
+
+}
+
+})
+
+</script>
+
 </head>
 
 <body>
 
 <a-scene
-  mindar-image="imageTargetSrc: ./marker.mind; autoStart: true; uiScanning: true; uiLoading: true;"
-  color-space="sRGB"
-  renderer="colorManagement: true, physicallyCorrectLights: true"
-  vr-mode-ui="enabled: false"
-  device-orientation-permission-ui="enabled: false"
+embedded
+vr-mode-ui="enabled:false"
+renderer="logarithmicDepthBuffer: true;"
+arjs="sourceType: webcam; debugUIEnabled: false;"
 >
 
-  <!-- LUCES -->
-  <a-entity light="type: ambient; intensity: 0.8"></a-entity>
-  <a-entity light="type: directional; intensity: 1" position="1 2 1"></a-entity>
+<a-assets>
+<a-asset-item id="modelo" src="asset.glb"></a-asset-item>
+</a-assets>
 
-  <!-- CÁMARA -->
-  <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+<!-- ILUMINACION -->
 
-  <!-- TARGET -->
-  <a-entity mindar-image-target="targetIndex: 0">
+<a-entity light="type: ambient; intensity: 0.3"></a-entity>
 
-    <!-- CONTENEDOR (para estabilidad) -->
-    <a-entity id="model-container" position="0 0 0">
+<a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
 
-      <a-gltf-model
-        id="model"
-        src="./asset.glb"
-        scale="0.5 0.5 0.5"
-        position="0 0 0"
-        rotation="0 0 0"
-        animation-mixer
-      >
-      </a-gltf-model>
+<a-entity
+light="type: directional; intensity: 0.4"
+position="2 4 2">
+</a-entity>
 
-    </a-entity>
+<a-marker type="pattern" url="marker.patt">
 
-  </a-entity>
+<a-entity
+gltf-model="#modelo"
+scale="1 1 1"
+position="0 0 0"
+gesture-handler>
+</a-entity>
+
+</a-marker>
+
+<a-entity camera></a-entity>
 
 </a-scene>
-
-<script>
-  const model = document.querySelector("#model");
-  const container = document.querySelector("#model-container");
-
-  // --- SUAVIZADO (anti temblor) ---
-  let lastPosition = {x:0, y:0, z:0};
-
-  container.addEventListener("componentchanged", (e) => {
-    if (e.detail.name === "position") {
-      let p = container.object3D.position;
-
-      // interpolación suave
-      p.x = lastPosition.x + (p.x - lastPosition.x) * 0.2;
-      p.y = lastPosition.y + (p.y - lastPosition.y) * 0.2;
-      p.z = lastPosition.z + (p.z - lastPosition.z) * 0.2;
-
-      lastPosition = {x: p.x, y: p.y, z: p.z};
-    }
-  });
-
-  // --- CONTROLES TÁCTILES ---
-  const hammertime = new Hammer(document.body);
-
-  let scale = 0.5;
-  let rotationY = 0;
-
-  // ROTAR
-  hammertime.get('pan').set({ direction: Hammer.DIRECTION_ALL });
-
-  hammertime.on("pan", (ev) => {
-    rotationY += ev.deltaX * 0.1;
-    model.setAttribute("rotation", `0 ${rotationY} 0`);
-  });
-
-  // ZOOM
-  hammertime.get('pinch').set({ enable: true });
-
-  hammertime.on("pinch", (ev) => {
-    scale = Math.max(0.2, Math.min(2, scale * ev.scale));
-    model.setAttribute("scale", `${scale} ${scale} ${scale}`);
-  });
-
-</script>
 
 </body>
 </html>
