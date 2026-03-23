@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Rotación Estable PRO</title>
+<title>WebAR Control Estable FINAL</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -28,6 +28,10 @@ let startScale = 1
 let rotationX = 0
 let rotationY = 0
 
+// 🔥 NUEVO: control incremental real
+let lastX = 0
+let lastY = 0
+
 scene.addEventListener("loaded", () => {
 
 const hammer = new Hammer(scene.canvas)
@@ -35,17 +39,27 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
-// 🔥 ROTACIÓN REALMENTE ESTABLE
+hammer.on("panstart", (ev) => {
+lastX = ev.deltaX
+lastY = ev.deltaY
+})
+
 hammer.on("pan", (ev) => {
 
-// 🔑 usar velocidad en vez de delta acumulado
-rotationY += ev.velocityX * 2
-rotationX -= ev.velocityY * 2
+// 🔥 calcular movimiento REAL (no acumulado)
+let deltaX = ev.deltaX - lastX
+let deltaY = ev.deltaY - lastY
 
-// límite vertical
-rotationX = Math.max(-80, Math.min(80, rotationX))
+lastX = ev.deltaX
+lastY = ev.deltaY
 
-// aplicar rotaciones separadas
+rotationY += deltaX * 0.5
+rotationX -= deltaY * 0.5
+
+// 🔥 límite seguro (evita inversión)
+rotationX = Math.max(-60, Math.min(60, rotationX))
+
+// aplicar rotación
 yPivot.setAttribute("rotation", {
 x: 0,
 y: rotationY,
@@ -101,23 +115,23 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 <a-asset-item id="modelo" src="asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- 💡 ILUMINACIÓN -->
+<!-- LUCES -->
 <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
 <a-entity light="type: directional; intensity: 0.4" position="2 4 2"></a-entity>
 
 <a-marker type="pattern" url="marker.patt">
 
-<!-- 🟡 OFFSET -->
+<!-- OFFSET (flotación) -->
 <a-entity position="0 0.3 0">
 
-    <!-- 🔵 PIVOTE Y -->
+    <!-- PIVOTE Y -->
     <a-entity gesture-handler>
 
-        <!-- 🔴 PIVOTE X -->
+        <!-- PIVOTE X -->
         <a-entity>
 
-            <!-- 📦 MODELO -->
+            <!-- MODELO -->
             <a-entity
             gltf-model="#modelo"
             position="0 0 0"
@@ -138,4 +152,3 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 </body>
 </html>
-
