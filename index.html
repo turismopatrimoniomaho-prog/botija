@@ -33,30 +33,29 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
-// ROTACIÓN CORREGIDA
 hammer.on("pan", (ev) => {
 
-// usar delta acumulado correctamente
-rotationY += ev.velocityX * 2
-rotationX += ev.velocityY * 2
+rotationY += ev.deltaX * 0.02
 
-// límite vertical
+// 🔥 CORRECCIÓN: invertir eje vertical
+rotationX -= ev.deltaY * 0.02
+
+// limitar inclinación
 rotationX = Math.max(-60, Math.min(60, rotationX))
 
 el.setAttribute("rotation", {
-x: rotationX,   // 🔥 ya NO invertido
+x: rotationX,
 y: rotationY,
 z: 0
 })
 
 })
 
-// ZOOM INICIO
+// ZOOM
 hammer.on("pinchstart", () => {
 startScale = currentScale
 })
 
-// ZOOM
 hammer.on("pinch", (ev) => {
 
 currentScale = startScale * ev.scale
@@ -92,14 +91,11 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 <a-asset-item id="modelo" src="./asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- ILUMINACIÓN -->
+<!-- LUCES -->
 <a-entity light="type: ambient; intensity: 0.4"></a-entity>
-
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
-
 <a-entity light="type: directional; intensity: 0.5" position="2 4 2"></a-entity>
 
-<!-- MARCADOR -->
 <a-marker 
 type="pattern" 
 url="./marker.patt"
@@ -109,13 +105,14 @@ smoothTolerance="0.01"
 smoothThreshold="5"
 >
 
-<!-- 🔥 CONTENEDOR PIVOTE (SOLUCIÓN CLAVE) -->
-<a-entity id="pivot" position="0 0 0" gesture-handler>
+<!-- 🔥 CONTENEDOR (PIVOTE REAL) -->
+<a-entity id="pivot" gesture-handler>
 
+    <!-- 🔥 MODELO CENTRADO -->
     <a-entity
     gltf-model="#modelo"
-    scale="1 1 1"
-    position="0 0 0">
+    position="0 0.5 0"  <!-- AJUSTA ESTE VALOR -->
+    scale="1 1 1">
     </a-entity>
 
 </a-entity>
