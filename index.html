@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Modelo Mejorado</title>
+<title>WebAR Modelo Corregido</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -30,27 +30,28 @@ scene.addEventListener("loaded", () => {
 
 const hammer = new Hammer(scene.canvas)
 
-// gestos configurados de forma más estable
 hammer.get('pinch').set({ enable: true })
-hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL })
+hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
-// ROTACIÓN (horizontal + vertical suave)
+// ROTACIÓN CORREGIDA
 hammer.on("pan", (ev) => {
 
-rotationY += ev.deltaX * 0.02
-rotationX += ev.deltaY * 0.01
+// usar delta acumulado correctamente
+rotationY += ev.velocityX * 2
+rotationX += ev.velocityY * 2
 
+// límite vertical
 rotationX = Math.max(-60, Math.min(60, rotationX))
 
 el.setAttribute("rotation", {
-x: -rotationX,
+x: rotationX,   // 🔥 ya NO invertido
 y: rotationY,
 z: 0
 })
 
 })
 
-// INICIO ZOOM
+// ZOOM INICIO
 hammer.on("pinchstart", () => {
 startScale = currentScale
 })
@@ -59,7 +60,6 @@ startScale = currentScale
 hammer.on("pinch", (ev) => {
 
 currentScale = startScale * ev.scale
-
 currentScale = Math.max(0.3, Math.min(currentScale, 4))
 
 el.setAttribute("scale", {
@@ -97,10 +97,7 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
 
-<a-entity
-light="type: directional; intensity: 0.5"
-position="2 4 2">
-</a-entity>
+<a-entity light="type: directional; intensity: 0.5" position="2 4 2"></a-entity>
 
 <!-- MARCADOR -->
 <a-marker 
@@ -112,17 +109,19 @@ smoothTolerance="0.01"
 smoothThreshold="5"
 >
 
-<a-entity
-gltf-model="#modelo"
-scale="1 1 1"
-position="0 0 0"
-rotation="0 0 0"
-gesture-handler>
+<!-- 🔥 CONTENEDOR PIVOTE (SOLUCIÓN CLAVE) -->
+<a-entity id="pivot" position="0 0 0" gesture-handler>
+
+    <a-entity
+    gltf-model="#modelo"
+    scale="1 1 1"
+    position="0 0 0">
+    </a-entity>
+
 </a-entity>
 
 </a-marker>
 
-<!-- CÁMARA -->
 <a-entity camera></a-entity>
 
 </a-scene>
