@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Control Estable FINAL</title>
+<title>WebAR Control Estable Final</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -18,8 +18,8 @@ AFRAME.registerComponent('gesture-handler', {
 
 init: function () {
 
-const yPivot = this.el
-const xPivot = this.el.children[0]
+const yPivot = this.el                 // rotación horizontal
+const xPivot = this.el.children[0]     // rotación vertical
 const scene = document.querySelector('a-scene')
 
 let currentScale = 1
@@ -28,7 +28,6 @@ let startScale = 1
 let rotationX = 0
 let rotationY = 0
 
-// 🔥 NUEVO: control incremental real
 let lastX = 0
 let lastY = 0
 
@@ -39,27 +38,40 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
+// INICIO DEL GESTO
 hammer.on("panstart", (ev) => {
 lastX = ev.deltaX
 lastY = ev.deltaY
 })
 
+// ROTACIÓN CORREGIDA
 hammer.on("pan", (ev) => {
 
-// 🔥 calcular movimiento REAL (no acumulado)
+// movimiento incremental real
 let deltaX = ev.deltaX - lastX
 let deltaY = ev.deltaY - lastY
 
 lastX = ev.deltaX
 lastY = ev.deltaY
 
+// rotación horizontal
 rotationY += deltaX * 0.5
-rotationX -= deltaY * 0.5
 
-// 🔥 límite seguro (evita inversión)
+// 🔥 detectar orientación del modelo
+let normalizedY = ((rotationY % 360) + 360) % 360
+let invert = (normalizedY > 90 && normalizedY < 270)
+
+// 🔥 corregir eje vertical dinámicamente
+if (invert) {
+    rotationX += deltaY * 0.5
+} else {
+    rotationX -= deltaY * 0.5
+}
+
+// limitar inclinación vertical
 rotationX = Math.max(-60, Math.min(60, rotationX))
 
-// aplicar rotación
+// aplicar rotaciones
 yPivot.setAttribute("rotation", {
 x: 0,
 y: rotationY,
@@ -115,23 +127,23 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 <a-asset-item id="modelo" src="asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- LUCES -->
+<!-- 💡 ILUMINACIÓN -->
 <a-entity light="type: ambient; intensity: 0.3"></a-entity>
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
 <a-entity light="type: directional; intensity: 0.4" position="2 4 2"></a-entity>
 
 <a-marker type="pattern" url="marker.patt">
 
-<!-- OFFSET (flotación) -->
+<!-- 🟡 OFFSET (flotación, NO rota) -->
 <a-entity position="0 0.3 0">
 
-    <!-- PIVOTE Y -->
+    <!-- 🔵 PIVOTE Y -->
     <a-entity gesture-handler>
 
-        <!-- PIVOTE X -->
+        <!-- 🔴 PIVOTE X -->
         <a-entity>
 
-            <!-- MODELO -->
+            <!-- 📦 MODELO -->
             <a-entity
             gltf-model="#modelo"
             position="0 0 0"
