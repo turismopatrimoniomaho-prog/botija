@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Control PRO REAL</title>
+<title>WebAR Control Anclado Frontal</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -20,7 +20,6 @@ init: function () {
 
 const el = this.el
 const scene = document.querySelector('a-scene')
-const camera = document.querySelector('[camera]')
 
 let lastX = 0
 let lastY = 0
@@ -35,13 +34,11 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 hammer.get('pinch').set({ enable: true })
 
-// inicio gesto
 hammer.on("panstart", (ev) => {
 lastX = ev.deltaX
 lastY = ev.deltaY
 })
 
-// 🔥 ROTACIÓN REAL (VIEW SPACE)
 hammer.on("pan", (ev) => {
 
 let dx = (ev.deltaX - lastX) * 0.005
@@ -51,19 +48,22 @@ lastX = ev.deltaX
 lastY = ev.deltaY
 
 const obj = el.object3D
-const cam = camera.object3D
 
-// 🔥 ejes relativos a la cámara
-const camQuaternion = cam.getWorldQuaternion(new THREE.Quaternion())
+// 🔥 eje Y GLOBAL (giro horizontal estable)
+const qY = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0,1,0),
+    -dx
+)
 
-const axisX = new THREE.Vector3(1, 0, 0).applyQuaternion(camQuaternion)
-const axisY = new THREE.Vector3(0, 1, 0).applyQuaternion(camQuaternion)
+// 🔥 eje X LOCAL DEL OBJETO (siempre frontal)
+const localX = new THREE.Vector3(1,0,0).applyQuaternion(obj.quaternion)
 
-// rotaciones
-const qX = new THREE.Quaternion().setFromAxisAngle(axisX, -dy)
-const qY = new THREE.Quaternion().setFromAxisAngle(axisY, -dx)
+const qX = new THREE.Quaternion().setFromAxisAngle(
+    localX,
+    -dy
+)
 
-// aplicar correctamente
+// aplicar rotación
 obj.quaternion.premultiply(qY)
 obj.quaternion.premultiply(qX)
 
@@ -117,7 +117,6 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 <a-marker type="pattern" url="marker.patt">
 
-<!-- 🔥 CONTROL REAL -->
 <a-entity gesture-handler position="0 0.3 0">
 
     <a-entity
