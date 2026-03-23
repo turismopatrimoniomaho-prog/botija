@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Modelo PRO</title>
+<title>WebAR Centro de Masa</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -14,9 +14,8 @@ body { margin:0; overflow:hidden; }
 
 <script>
 
-// 🎮 GESTOS
+// 🎮 GESTOS (solo afectan al PIVOT)
 AFRAME.registerComponent('gesture-handler', {
-
 init: function () {
 
 const el = this.el
@@ -24,7 +23,6 @@ const scene = document.querySelector('a-scene')
 
 let currentScale = 1
 let startScale = 1
-
 let rotationX = 0
 let rotationY = 0
 
@@ -35,13 +33,11 @@ const hammer = new Hammer(scene.canvas)
 hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
 
-// 🔄 ROTACIÓN 2 EJES REAL
 hammer.on("pan", (ev) => {
 
 rotationY += ev.deltaX * 0.02
 rotationX -= ev.deltaY * 0.02
 
-// limitar inclinación vertical
 rotationX = Math.max(-60, Math.min(60, rotationX))
 
 el.setAttribute("rotation", {
@@ -52,12 +48,10 @@ z: 0
 
 })
 
-// 🔍 INICIO ZOOM
 hammer.on("pinchstart", () => {
 startScale = currentScale
 })
 
-// 🔍 ZOOM
 hammer.on("pinch", (ev) => {
 
 currentScale = startScale * ev.scale
@@ -74,12 +68,11 @@ z: currentScale
 })
 
 }
-
 })
 
 
-// 🎯 CENTRADO AUTOMÁTICO (SOLUCIÓN CLAVE)
-AFRAME.registerComponent('auto-center', {
+// 🎯 CENTRAR EN CENTRO DE MASA (SIN TOCAR ALTURA FINAL)
+AFRAME.registerComponent('center-model', {
 init: function () {
 
 this.el.addEventListener('model-loaded', () => {
@@ -92,8 +85,12 @@ const center = new THREE.Vector3()
 
 box.getCenter(center)
 
-// mover modelo al centro REAL
-this.el.object3D.position.sub(center)
+// mover modelo para que SU centro quede en (0,0,0)
+this.el.object3D.position.set(
+  -center.x,
+  -center.y,
+  -center.z
+)
 
 })
 
@@ -117,41 +114,32 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 <a-asset-item id="modelo" src="./asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- 💡 ILUMINACIÓN -->
+<!-- 💡 LUCES -->
 <a-entity light="type: ambient; intensity: 0.4"></a-entity>
-
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
+<a-entity light="type: directional; intensity: 0.5" position="2 4 2"></a-entity>
 
-<a-entity 
-light="type: directional; intensity: 0.5"
-position="2 4 2">
-</a-entity>
+<a-marker type="pattern" url="./marker.patt">
 
-<!-- 📍 MARCADOR -->
-<a-marker 
-type="pattern" 
-url="./marker.patt"
-smooth="true"
-smoothCount="10"
-smoothTolerance="0.01"
-smoothThreshold="5"
->
+<!-- 🔥 NIVEL 1: PIVOT (ROTACIÓN REAL) -->
+<a-entity id="pivot" gesture-handler>
 
-<!-- 🔥 PIVOTE REAL -->
-<a-entity gesture-handler>
+    <!-- 🔥 NIVEL 2: OFFSET (ALTURA FLOTANTE) -->
+    <a-entity position="0 0.3 0"> <!-- AJUSTA ALTURA AQUÍ -->
 
-    <!-- 📦 MODELO (centrado automáticamente) -->
-    <a-entity
-    gltf-model="#modelo"
-    auto-center
-    scale="1 1 1">
+        <!-- 🔥 NIVEL 3: MODELO CENTRADO EN SU MASA -->
+        <a-entity
+        gltf-model="#modelo"
+        center-model
+        scale="1 1 1">
+        </a-entity>
+
     </a-entity>
 
 </a-entity>
 
 </a-marker>
 
-<!-- 📷 CÁMARA -->
 <a-entity camera></a-entity>
 
 </a-scene>
