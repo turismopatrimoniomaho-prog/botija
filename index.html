@@ -73,7 +73,7 @@ currentVec.copy(projectOnTrackball(ev.center.x, ev.center.y))
 let axis = new THREE.Vector3().crossVectors(startVec, currentVec)
 
 // ángulo
-let angle = startVec.angleTo(currentVec)
+let angle = startVec.angleTo(currentVec) * 2
 
 if (axis.lengthSq() > 0.0001) {
 
