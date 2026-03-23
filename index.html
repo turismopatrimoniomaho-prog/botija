@@ -13,7 +13,6 @@ body { margin:0; overflow:hidden; }
 </style>
 
 <script>
-
 AFRAME.registerComponent('gesture-handler', {
 
 init: function () {
@@ -24,24 +23,24 @@ const scene = document.querySelector('a-scene')
 let currentScale = 1
 let startScale = 1
 
-let rotationX = 0   // vertical
-let rotationY = 0   // horizontal
+let rotationX = 0
+let rotationY = 0
 
 scene.addEventListener("loaded", () => {
 
 const hammer = new Hammer(scene.canvas)
 
+// gestos configurados de forma más estable
 hammer.get('pinch').set({ enable: true })
-hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
+hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL })
 
-// ROTACION 2 EJES
+// ROTACIÓN (horizontal + vertical suave)
 hammer.on("pan", (ev) => {
 
 rotationY += ev.deltaX * 0.02
-rotationX += ev.deltaY * 0.02
+rotationX += ev.deltaY * 0.01
 
-// limitar rotación vertical (evita que se voltee completamente)
-rotationX = Math.max(-80, Math.min(80, rotationX))
+rotationX = Math.max(-60, Math.min(60, rotationX))
 
 el.setAttribute("rotation", {
 x: -rotationX,
@@ -51,7 +50,7 @@ z: 0
 
 })
 
-// ZOOM INICIO
+// INICIO ZOOM
 hammer.on("pinchstart", () => {
 startScale = currentScale
 })
@@ -61,7 +60,6 @@ hammer.on("pinch", (ev) => {
 
 currentScale = startScale * ev.scale
 
-// límites de zoom
 currentScale = Math.max(0.3, Math.min(currentScale, 4))
 
 el.setAttribute("scale", {
@@ -77,7 +75,6 @@ z: currentScale
 }
 
 })
-
 </script>
 
 </head>
@@ -92,31 +89,40 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 >
 
 <a-assets>
-<a-asset-item id="modelo" src="asset.glb"></a-asset-item>
+<a-asset-item id="modelo" src="./asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- ILUMINACION -->
-
-<a-entity light="type: ambient; intensity: 0.3"></a-entity>
+<!-- ILUMINACIÓN -->
+<a-entity light="type: ambient; intensity: 0.4"></a-entity>
 
 <a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
 
 <a-entity
-light="type: directional; intensity: 0.4"
+light="type: directional; intensity: 0.5"
 position="2 4 2">
 </a-entity>
 
-<a-marker type="pattern" url="marker.patt">
+<!-- MARCADOR -->
+<a-marker 
+type="pattern" 
+url="./marker.patt"
+smooth="true"
+smoothCount="10"
+smoothTolerance="0.01"
+smoothThreshold="5"
+>
 
 <a-entity
 gltf-model="#modelo"
 scale="1 1 1"
 position="0 0 0"
+rotation="0 0 0"
 gesture-handler>
 </a-entity>
 
 </a-marker>
 
+<!-- CÁMARA -->
 <a-entity camera></a-entity>
 
 </a-scene>
