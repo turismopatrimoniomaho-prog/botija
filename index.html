@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Control Correcto</title>
+<title>WebAR Quaternion Control</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -20,8 +20,6 @@ init: function () {
 
 const el = this.el
 const scene = document.querySelector('a-scene')
-
-let rotation = { x: 0, y: 0 }
 
 let lastX = 0
 let lastY = 0
@@ -42,26 +40,29 @@ lastX = ev.deltaX
 lastY = ev.deltaY
 })
 
-// 🔥 ROTACIÓN TIPO TRACKBALL (SIN ERRORES)
+// 🔥 ROTACIÓN REAL CON QUATERNIONS
 hammer.on("pan", (ev) => {
 
-let dx = ev.deltaX - lastX
-let dy = ev.deltaY - lastY
+let dx = (ev.deltaX - lastX) * 0.005
+let dy = (ev.deltaY - lastY) * 0.005
 
 lastX = ev.deltaX
 lastY = ev.deltaY
 
-rotation.y += dx * 0.5
-rotation.x -= dy * 0.5
+// obtener orientación actual
+const quaternion = el.object3D.quaternion
 
-// 🔥 límite opcional suave (puedes quitarlo)
-rotation.x = Math.max(-75, Math.min(75, rotation.x))
+// ejes de rotación en espacio global
+const axisY = new THREE.Vector3(0, 1, 0)
+const axisX = new THREE.Vector3(1, 0, 0)
 
-el.setAttribute("rotation", {
-x: rotation.x,
-y: rotation.y,
-z: 0
-})
+// rotaciones incrementales
+const qY = new THREE.Quaternion().setFromAxisAngle(axisY, -dx)
+const qX = new THREE.Quaternion().setFromAxisAngle(axisX, -dy)
+
+// aplicar rotación acumulativa (orden importante)
+quaternion.premultiply(qY)
+quaternion.premultiply(qX)
 
 })
 
@@ -113,7 +114,7 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 <a-marker type="pattern" url="marker.patt">
 
-<!-- 🔥 UN SOLO PIVOTE (clave) -->
+<!-- 🔥 UN SOLO PIVOTE -->
 <a-entity gesture-handler position="0 0.3 0">
 
     <a-entity
@@ -132,3 +133,4 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 
 </body>
 </html>
+
