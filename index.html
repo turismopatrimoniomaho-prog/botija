@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>WebAR Sketchfab Style</title>
+<title>WebAR Trackball REAL</title>
 
 <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
 <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js/aframe/build/aframe-ar.js"></script>
@@ -21,60 +21,95 @@ init: function () {
 const el = this.el
 const scene = document.querySelector('a-scene')
 
-let scale = 1
+let startVec = new THREE.Vector3()
+let currentVec = new THREE.Vector3()
+
+let currentScale = 1
 let startScale = 1
 
-// ROTACIÓN SUAVE
-let rotX = 0
-let rotY = 0
+// 🔵 convierte pantalla → esfera virtual
+function projectOnTrackball(x, y) {
 
-let targetRotX = 0
-let targetRotY = 0
+let rect = scene.canvas.getBoundingClientRect()
+
+let nx = ( (x - rect.left) / rect.width ) * 2 - 1
+let ny = -( (y - rect.top) / rect.height ) * 2 + 1
+
+let length = nx * nx + ny * ny
+
+let nz
+
+if (length <= 1) {
+    nz = Math.sqrt(1 - length)
+} else {
+    let norm = 1 / Math.sqrt(length)
+    nx *= norm
+    ny *= norm
+    nz = 0
+}
+
+return new THREE.Vector3(nx, ny, nz)
+
+}
 
 scene.addEventListener("loaded", () => {
 
 const hammer = new Hammer(scene.canvas)
 
-hammer.get('pinch').set({ enable: true })
 hammer.get('pan').set({ direction: Hammer.DIRECTION_ALL })
+hammer.get('pinch').set({ enable: true })
 
-// 🔵 ROTACIÓN TIPO SKETCHFAB
-hammer.on("panmove", (ev) => {
-
-targetRotY += ev.deltaX * 0.1
-targetRotX += ev.deltaY * 0.1
-
-// limitar inclinación vertical (evitar volteo raro)
-targetRotX = Math.max(-80, Math.min(80, targetRotX))
-
+// INICIO
+hammer.on("panstart", (ev) => {
+startVec.copy(projectOnTrackball(ev.center.x, ev.center.y))
 })
 
-// 🔵 ZOOM INICIO
-hammer.on("pinchstart", () => {
-startScale = scale
-})
+// MOVIMIENTO
+hammer.on("pan", (ev) => {
 
-// 🔵 ZOOM
-hammer.on("pinchmove", (ev) => {
+currentVec.copy(projectOnTrackball(ev.center.x, ev.center.y))
 
-scale = startScale * ev.scale
-scale = Math.max(0.3, Math.min(scale, 4))
+// eje de rotación
+let axis = new THREE.Vector3().crossVectors(startVec, currentVec)
 
-el.setAttribute("scale", `${scale} ${scale} ${scale}`)
+// ángulo
+let angle = startVec.angleTo(currentVec) * 2
 
-})
+if (axis.lengthSq() > 0.0001) {
 
-})
+axis.normalize()
 
-// 🔵 SUAVIZADO (INERCIA)
-this.tick = function () {
+let q = new THREE.Quaternion().setFromAxisAngle(axis, angle)
 
-rotX += (targetRotX - rotX) * 0.15
-rotY += (targetRotY - rotY) * 0.15
+// aplicar rotación
+el.object3D.quaternion.premultiply(q)
 
-el.setAttribute("rotation", `${rotX} ${rotY} 0`)
+// actualizar referencia
+startVec.copy(currentVec)
 
 }
+
+})
+
+// ZOOM
+hammer.on("pinchstart", () => {
+startScale = currentScale
+})
+
+hammer.on("pinch", (ev) => {
+
+currentScale = startScale * ev.scale
+currentScale = Math.max(0.3, Math.min(currentScale, 4))
+
+el.setAttribute("scale", {
+x: currentScale,
+y: currentScale,
+z: currentScale
+})
+
+})
+
+})
 
 }
 
@@ -97,24 +132,21 @@ arjs="sourceType: webcam; debugUIEnabled: false;"
 <a-asset-item id="modelo" src="asset.glb"></a-asset-item>
 </a-assets>
 
-<!-- 🌞 ILUMINACIÓN MÁS NATURAL -->
-
-<a-entity light="type: ambient; intensity: 0.4"></a-entity>
-
-<a-entity light="type: hemisphere; intensity: 1; groundColor: #666"></a-entity>
-
-<a-entity
-light="type: directional; intensity: 0.6"
-position="2 4 2">
-</a-entity>
+<!-- LUCES -->
+<a-entity light="type: ambient; intensity: 0.6"></a-entity>
+<a-entity light="type: hemisphere; intensity: 1; groundColor: #444"></a-entity>
+<a-entity light="type: directional; intensity: 0.4" position="2 4 2"></a-entity>
 
 <a-marker type="pattern" url="marker.patt">
 
-<a-entity
-gltf-model="#modelo"
-scale="1 1 1"
-position="0 0 0"
-gesture-handler>
+<a-entity gesture-handler position="0 0.3 0">
+
+    <a-entity
+    gltf-model="#modelo"
+    position="0 0 0"
+    scale="1 1 1">
+    </a-entity>
+
 </a-entity>
 
 </a-marker>
@@ -125,4 +157,6 @@ gesture-handler>
 
 </body>
 </html>
+
+
   
